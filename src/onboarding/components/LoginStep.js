@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-export default function LoginStep({ data, onUpdate }) {
+export default function LoginStep({ data, onUpdate, onNext }) {
   const [errors, setErrors] = useState({});
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -12,6 +12,10 @@ export default function LoginStep({ data, onUpdate }) {
       newErrors.password = "Password is required";
     }
     setErrors(newErrors);
+
+    if (Object.keys(newErrors).length === 0) {
+      onNext();
+    }
   };
 
   const handleChange = (e) => {
