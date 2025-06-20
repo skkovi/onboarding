@@ -1,9 +1,13 @@
 import React, { useState } from "react";
-
+import { createClient } from "../../../utils/supabase/client";
 export default function LoginStep({ data, onUpdate, onNext }) {
   const [errors, setErrors] = useState({});
-  const handleSubmit = (e) => {
+  const [signUp, setSignUp] = useState(false);
+  const supabase = createClient();
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
     const newErrors = {};
     if (!data.email) {
       newErrors.email = "Email is required";
@@ -11,10 +15,60 @@ export default function LoginStep({ data, onUpdate, onNext }) {
     if (!data.password) {
       newErrors.password = "Password is required";
     }
-    setErrors(newErrors);
 
-    if (Object.keys(newErrors).length === 0) {
-      onNext();
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    try {
+      if (!signUp) {
+        const { data: signInData, error } =
+          await supabase.auth.signInWithPassword({
+            email: data.email,
+            password: data.password,
+          });
+        if (error) {
+          if (error.message.includes("Invalid login credentials")) {
+            setErrors({ general: error.message });
+          } else {
+            console.log("Error signing up:", error);
+            setErrors({ general: error.message });
+            return;
+          }
+        } else {
+          console.log("Signed in successfully:", signInData.user);
+          onUpdate({ userId: signInData.user?.id });
+          onNext();
+        }
+      } else {
+        const { data: signUpData, error: signUpError } =
+          await supabase.auth.signUp({
+            email: data.email.trim(),
+            password: data.password,
+          });
+        if (signUpError) {
+          console.log("Error signing in:", signUpError);
+          return;
+        }
+        onUpdate({ userId: signUpData.user?.id });
+        onNext();
+      }
+    } catch (error) {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          console.log("Authentication successful despite catch error:", user);
+          onUpdate({ userId: user.id });
+          onNext();
+          return;
+        }
+      } catch (checkError) {
+        console.error("Error checking user status:", checkError);
+      }
+      console.log("Error during auth:", error);
+      setErrors({ general: "Error occurred during auth" });
     }
   };
 
@@ -26,6 +80,10 @@ export default function LoginStep({ data, onUpdate, onNext }) {
 
   return (
     <div className="space-y-4">
+      {errors.general && (
+        <p className="text-red-500 text-sm mt-1">{errors.general}</p>
+      )}
+      {signUp ? <p>Sign Up</p> : <p>Sign In</p>}
       <form onSubmit={handleSubmit}>
         <label className="block text-sm font-md text-gray-700 mb-2">
           Email Address
@@ -62,6 +120,19 @@ export default function LoginStep({ data, onUpdate, onNext }) {
           Submit
         </button>
       </form>
+      <div>
+        <buton
+          type="button"
+          onClick={() => {
+            setSignUp(!signUp);
+            setErrors({});
+          }}
+        >
+          {signUp
+            ? "Already have an account? Sign in"
+            : "Don't have an account? Sign up"}
+        </buton>
+      </div>
     </div>
   );
 }

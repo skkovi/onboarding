@@ -3,10 +3,12 @@ import React, { useState } from "react";
 import LoginStep from "./LoginStep";
 import AboutMe from "./AboutMe";
 import Address from "./Address";
+import Birthdate from "./Birthdate";
 
 export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
+    userId: "",
     email: "",
     password: "",
     aboutMe: "",
@@ -16,6 +18,7 @@ export default function OnboardingPage() {
       state: "",
       zip: "",
     },
+    birthDate: "",
   });
 
   const nextStep = () => {

@@ -16,6 +16,9 @@ export default function Address({ data, onUpdate, onNext, onPrevious }) {
       }
     });
     setErrors(newErrors);
+    if (Object.keys(newErrors).length === 0) {
+      onNext();
+    }
   };
   const handleChange = (e) => {
     let field = e.target.name;
