@@ -19,6 +19,8 @@ export default function AboutMe({ data, onUpdate, onNext, onPrevious }) {
           name="aboutMe"
           value={data.aboutMe}
           onChange={handleChange}
+          rows="4"
+          className="w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         ></textarea>
         <button
           type="submit"

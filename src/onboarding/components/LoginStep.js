@@ -3,11 +3,12 @@ import { createClient } from "../../../utils/supabase/client";
 export default function LoginStep({ data, onUpdate, onNext }) {
   const [errors, setErrors] = useState({});
   const [signUp, setSignUp] = useState(false);
+  const [isLoading, setisLoading] = useState(false);
   const supabase = createClient();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setisLoading(true);
     const newErrors = {};
     if (!data.email) {
       newErrors.email = "Email is required";
@@ -18,6 +19,7 @@ export default function LoginStep({ data, onUpdate, onNext }) {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      setisLoading(false);
       return;
     }
     try {
@@ -33,6 +35,7 @@ export default function LoginStep({ data, onUpdate, onNext }) {
           } else {
             console.log("Error signing up:", error);
             setErrors({ general: error.message });
+            setisLoading(false);
             return;
           }
         } else {
@@ -48,27 +51,17 @@ export default function LoginStep({ data, onUpdate, onNext }) {
           });
         if (signUpError) {
           console.log("Error signing in:", signUpError);
+          setisLoading(false);
           return;
         }
         onUpdate({ userId: signUpData.user?.id });
         onNext();
       }
     } catch (error) {
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (user) {
-          console.log("Authentication successful despite catch error:", user);
-          onUpdate({ userId: user.id });
-          onNext();
-          return;
-        }
-      } catch (checkError) {
-        console.error("Error checking user status:", checkError);
-      }
       console.log("Error during auth:", error);
       setErrors({ general: "Error occurred during auth" });
+    } finally {
+      setisLoading(false);
     }
   };
 
@@ -83,7 +76,6 @@ export default function LoginStep({ data, onUpdate, onNext }) {
       {errors.general && (
         <p className="text-red-500 text-sm mt-1">{errors.general}</p>
       )}
-      {signUp ? <p>Sign Up</p> : <p>Sign In</p>}
       <form onSubmit={handleSubmit}>
         <label className="block text-sm font-md text-gray-700 mb-2">
           Email Address
@@ -115,14 +107,16 @@ export default function LoginStep({ data, onUpdate, onNext }) {
         )}
         <button
           type="submit"
+          disabled={isLoading}
           className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 mt-4"
         >
-          Submit
+          {isLoading ? "Processing..." : "Submit"}
         </button>
       </form>
       <div>
         <buton
           type="button"
+          disabled={isLoading}
           onClick={() => {
             setSignUp(!signUp);
             setErrors({});
