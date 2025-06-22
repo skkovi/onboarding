@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "../../../utils/supabase/client";
 
-export default function Data({ data }) {
+export default function Data() {
   const supabase = createClient();
   const [userData, setUserData] = useState([]);
   useEffect(() => {

@@ -38,17 +38,23 @@ export default function OnboardingPage() {
       const result = await fn();
       if (!result) return;
     }
+    if (currentStep === 3) {
+      await postData();
+    }
     nextStep();
   };
 
-  const nextStep = () => {
-    setCurrentStep((prev) => {
-      const newStep = prev + 1;
-      if (newStep === 4) {
-        postData();
-      }
-      return newStep;
-    });
+  const nextStep = async () => {
+    const newStep = currentStep + 1;
+    setCurrentStep(newStep);
+    if (formData.userId) {
+      console.log("Updating current_step to:", newStep);
+      await supabase
+        .from("users")
+        .update({ current_step: newStep })
+        .eq("userId", formData.userId);
+    }
+    return newStep;
   };
   const previousStep = () => {
     if (currentStep > 1) {
@@ -131,6 +137,7 @@ export default function OnboardingPage() {
             data={formData}
             onUpdate={updateFormData}
             onNext={nextStep}
+            setStep={setCurrentStep}
           />
         );
       case 2:

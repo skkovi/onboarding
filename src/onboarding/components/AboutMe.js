@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-export default function AboutMe({ data, onUpdate, onNext, onRegister }) {
+export default function AboutMe({ data, onUpdate, onRegister }) {
   const handleSubmit = (e) => {
     return true;
   };

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { createClient } from "../../../utils/supabase/client";
-export default function LoginStep({ data, onUpdate, onNext }) {
+export default function LoginStep({ data, onUpdate, setStep }) {
   const [errors, setErrors] = useState({});
   const [signUp, setSignUp] = useState(false);
   const [isLoading, setisLoading] = useState(false);
@@ -41,7 +41,24 @@ export default function LoginStep({ data, onUpdate, onNext }) {
         } else {
           console.log("Signed in successfully:", signInData.user);
           onUpdate({ userId: signInData.user?.id });
-          onNext();
+          const { data: userStepData, error: fetchError } = await supabase
+            .from("users")
+            .select("current_step")
+            .eq("userId", signInData.user?.id);
+          if (fetchError) {
+            setErrors({ general: fetchError.message });
+            setStep(1);
+            setisLoading(false);
+            return;
+          } else {
+            let step = userStepData?.[0]?.current_step;
+            if (!step || step === 1) {
+              step = 2;
+            }
+            onUpdate({ current_step: step });
+            setStep(step);
+          }
+          return;
         }
       } else {
         const { data: signUpData, error: signUpError } =
@@ -49,13 +66,56 @@ export default function LoginStep({ data, onUpdate, onNext }) {
             email: data.email.trim(),
             password: data.password,
           });
+        const { data: userStepData, error: fetchError } = await supabase
+          .from("users")
+          .select("current_step")
+          .eq("userId", signUpData.user?.id);
+        if (fetchError) {
+          setErrors({ general: fetchError.message });
+          setStep(1);
+          setisLoading(false);
+          return;
+        } else {
+          let step = userStepData?.[0]?.current_step;
+          if (!step || step === 1) {
+            step = 2;
+          }
+          onUpdate({ current_step: step });
+          setStep(step);
+        }
         if (signUpError) {
           console.log("Error signing in:", signUpError);
           setisLoading(false);
           return;
         }
-        onUpdate({ userId: signUpData.user?.id });
-        onNext();
+        const userId = signUpData.user?.id;
+        onUpdate({ userId: userId });
+        const { data: existingUser, error } = await supabase
+          .from("users")
+          .select("current_step")
+          .eq("userId", userId);
+        if (error) {
+          setErrors({ general: error.message });
+          return;
+        }
+        if (!existingUser || existingUser.length === 0) {
+          console.log("No existing user found, creating new user");
+          const { error: insertError } = await supabase
+            .from("users")
+            .insert([{ userId, email: data.email, current_step: 2 }]);
+          if (insertError) {
+            setErrors({ general: insertError.message });
+            return;
+          }
+          onUpdate({ current_step: 2 });
+          setStep(2);
+        } else {
+          console.log("Existing user found:", existingUser);
+          const userStep = existingUser[0]?.current_step || 2;
+          onUpdate({ current_step: userStep });
+          setStep(userStep);
+          console.log("Step set to:", userStep);
+        }
       }
     } catch (error) {
       console.log("Error during auth:", error);
