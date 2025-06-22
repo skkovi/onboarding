@@ -1,4 +1,4 @@
-export default function AboutMe({ data, onUpdate, onNext, onPrevious }) {
+export default function AboutMe({ data, onUpdate, onNext }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     onNext();
@@ -21,6 +21,7 @@ export default function AboutMe({ data, onUpdate, onNext, onPrevious }) {
           onChange={handleChange}
           rows="4"
           className="w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Tell us about yourself..."
         ></textarea>
         <button
           type="submit"
@@ -29,7 +30,6 @@ export default function AboutMe({ data, onUpdate, onNext, onPrevious }) {
           Submit
         </button>
       </form>
-      <button onClick={onPrevious}>Go Back</button>
     </div>
   );
 }

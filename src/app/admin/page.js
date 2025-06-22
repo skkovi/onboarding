@@ -62,13 +62,13 @@ export default function Admin() {
     fetchAdminData();
   }, []);
   return (
-    <div className="h-screen flex items-center justify-center bg-gray-100">
+    <div className="h-screen flex items-center justify-center bg-gray-100 text-gray-700">
       <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-md">
-        <h1>Admin Dashboard</h1>
-        <p>Welcome to the admin panel. Here you can manage your application.</p>
+        <h1 className="text-xl font-bold">Admin Dashboard</h1>
+        <p className="text-gray-600">Configure Onboarding Flow Components</p>
         <div className="grid grid-cols-1 gap-4 mt-4">
           <div className="p-4 bg-gray-50 rounded shadow">
-            <h3>Page 2 components</h3>
+            <h3 className="text-lg font-semibold mb-2">Page Components</h3>
             {allComponents.map((component) => {
               let page = getComponentPage(component);
               return (
@@ -91,15 +91,6 @@ export default function Admin() {
               );
             })}
           </div>
-        </div>
-        <div className="mt-6">
-          <h3 className="font-semibold">Current Assignments:</h3>
-          <p>
-            <strong>Page 2:</strong> {adminData.page2.join(", ")}
-          </p>
-          <p>
-            <strong>Page 3:</strong> {adminData.page3.join(", ")}
-          </p>
         </div>
       </div>
     </div>

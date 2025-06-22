@@ -86,12 +86,12 @@ export default function LoginStep({ data, onUpdate, onNext }) {
           placeholder="Username"
           value={data.email}
           onChange={handleChange}
-          className="w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-10"
         ></input>
         {errors.email && (
           <p className="text-red-500 text-sm mt-1">{errors.email}</p>
         )}
-        <label className="block text-sm font-md text-gray-700 mb-2">
+        <label className="block text-sm font-md text-gray-700 mb-2 mt-4">
           Password
         </label>
         <input
@@ -100,7 +100,7 @@ export default function LoginStep({ data, onUpdate, onNext }) {
           placeholder="Password"
           value={data.password}
           onChange={handleChange}
-          className="w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-10"
         ></input>
         {errors.password && (
           <p className="text-red-500 text-sm mt-1">{errors.password}</p>

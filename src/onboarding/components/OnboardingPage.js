@@ -4,6 +4,7 @@ import LoginStep from "./LoginStep";
 import AboutMe from "./AboutMe";
 import Address from "./Address";
 import Birthdate from "./Birthdate";
+import ProgressIndicator from "./ProgressIndicator";
 import { createClient } from "../../../utils/supabase/client";
 
 export default function OnboardingPage() {
@@ -119,14 +120,11 @@ export default function OnboardingPage() {
   }, []);
 
   return (
-    <div className="h-screen flex items-center justify-center bg-gray-100">
-      <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-md">
-        <h1>New Onboarding Project</h1>
+    <div className="h-screen flex flex-col items-center justify-center bg-gray-100">
+      <ProgressIndicator currentStep={currentStep} />
+      <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-md text-gray-700 mt-6">
+        <h1 className="text-xl font-bold mb-4">Welcome To Onboarding!</h1>
         {renderStep()}
-      </div>
-      <div className="max-w-md mx-auto mt-4 p-4 bg-gray-50 rounded">
-        <h3 className="font-semibold mb-2">Current form data:</h3>
-        <pre className="text-sm">{JSON.stringify(formData, null, 2)}</pre>
       </div>
     </div>
   );
