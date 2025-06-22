@@ -195,11 +195,6 @@ export default function OnboardingPage() {
         <h1 className="text-xl font-bold mb-4">Welcome To Onboarding!</h1>
         {renderStep()}
       </div>
-      <div className="max-w-md mx-auto mt-4 p-4 bg-gray-50 rounded text-gray-600">
-        Add comment More actions
-        <h3 className="font-semibold mb-2">Current form data:</h3>
-        <pre className="text-sm">{JSON.stringify(formData, null, 2)}</pre>
-      </div>
     </div>
   );
 }
