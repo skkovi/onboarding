@@ -1,6 +1,9 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { createClient } from "../../../utils/supabase/client";
+
 export default function Admin() {
+  const supabase = createClient();
   const [adminData, setAdminData] = useState({
     page2: ["About Me", "Birthdate"],
     page3: ["Address"],
@@ -15,25 +18,49 @@ export default function Admin() {
     }
     return null;
   };
-  let handleChange = (component, targetPage) => {
+  let handleChange = async (component, targetPage) => {
     let currentPage = getComponentPage(component);
     if (!currentPage || currentPage === targetPage) return;
     if (adminData[currentPage].length === 1) {
       alert("You cannot remove the last component from a page.");
       return;
     }
-    setAdminData((prev) => {
-      const updateCurrent = prev[currentPage].filter(
+    const updatedAdmin = {
+      ...adminData,
+      [currentPage]: adminData[currentPage].filter(
         (comp) => comp !== component
-      );
-      const updateTarget = [...prev[targetPage], component];
-      return {
-        ...prev,
-        [currentPage]: updateCurrent,
-        [targetPage]: updateTarget,
-      };
-    });
+      ),
+      [targetPage]: [...adminData[targetPage], component],
+    };
+    setAdminData(updatedAdmin);
+    const { data: row, error } = await supabase
+      .from("component_config")
+      .select("*")
+      .single();
+    await supabase
+      .from("component_config")
+      .update({
+        page2_components: updatedAdmin.page2,
+        page3_components: updatedAdmin.page3,
+      })
+      .eq("id", row.id);
   };
+  useEffect(() => {
+    const fetchAdminData = async () => {
+      const { data } = await supabase
+        .from("component_config")
+        .select("*")
+        .limit(1)
+        .single();
+      if (data) {
+        setAdminData({
+          page2: data.page2_components || [],
+          page3: data.page3_components || [],
+        });
+      }
+    };
+    fetchAdminData();
+  }, []);
   return (
     <div className="h-screen flex items-center justify-center bg-gray-100">
       <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-md">
@@ -42,7 +69,7 @@ export default function Admin() {
         <div className="grid grid-cols-1 gap-4 mt-4">
           <div className="p-4 bg-gray-50 rounded shadow">
             <h3>Page 2 components</h3>
-            {allComponents.map((component, index) => {
+            {allComponents.map((component) => {
               let page = getComponentPage(component);
               return (
                 <div
@@ -52,7 +79,7 @@ export default function Admin() {
                   <span>{component}</span>
                   <select
                     className="text-red-500 hover:text-red-700"
-                    value={page || ""}
+                    value={page || "unassigned"}
                     onChange={(e) => {
                       handleChange(component, e.target.value);
                     }}
