@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import LoginStep from "./LoginStep";
 import AboutMe from "./AboutMe";
 import Address from "./Address";
@@ -9,7 +9,9 @@ import { createClient } from "../../../utils/supabase/client";
 
 export default function OnboardingPage() {
   const supabase = createClient();
+  const submitFnsRef = useRef([]);
   const [currentStep, setCurrentStep] = useState(1);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   const [componentConfig, setComponentConfig] = useState({
     page2: [],
     page3: [],
@@ -28,12 +30,25 @@ export default function OnboardingPage() {
     birthDate: "",
   });
 
-  const nextStep = () => {
-    if (currentStep < 3) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      console.log("FORM IS SUCCESSFUL");
+  const registerSubmitFn = (step, fn) => {
+    submitFnsRef.current[step] = fn;
+  };
+  const handlePageSubmit = async () => {
+    for (let fn of submitFnsRef.current) {
+      const result = await fn();
+      if (!result) return;
     }
+    nextStep();
+  };
+
+  const nextStep = () => {
+    setCurrentStep((prev) => {
+      const newStep = prev + 1;
+      if (newStep === 4) {
+        postData();
+      }
+      return newStep;
+    });
   };
   const previousStep = () => {
     if (currentStep > 1) {
@@ -47,9 +62,29 @@ export default function OnboardingPage() {
     });
   };
 
+  const postData = async () => {
+    setHasSubmitted(true);
+    const { address, ...rest } = formData;
+    const flattenedData = {
+      ...rest,
+      ...address,
+    };
+
+    const { error } = await supabase
+      .from("users")
+      .upsert([flattenedData], { onConflict: "email" });
+    if (error) {
+      console.error("Error inserting data:", error);
+      setHasSubmitted(false);
+      return false;
+    }
+    return true;
+  };
+
   const renderStep = () => {
     const renderComponents = (components) => {
-      return components.map((component) => {
+      submitFnsRef.current = [];
+      return components.map((component, index) => {
         if (component === "About Me") {
           return (
             <AboutMe
@@ -58,6 +93,7 @@ export default function OnboardingPage() {
               onUpdate={updateFormData}
               onNext={nextStep}
               onPrevious={previousStep}
+              onRegister={(fn) => registerSubmitFn(index, fn)}
             />
           );
         }
@@ -69,6 +105,7 @@ export default function OnboardingPage() {
               onUpdate={updateFormData}
               onNext={nextStep}
               onPrevious={previousStep}
+              onRegister={(fn) => registerSubmitFn(index, fn)}
             />
           );
         }
@@ -80,6 +117,7 @@ export default function OnboardingPage() {
               onUpdate={updateFormData}
               onNext={nextStep}
               onPrevious={previousStep}
+              onRegister={(fn) => registerSubmitFn(index, fn)}
             />
           );
         }
@@ -96,9 +134,40 @@ export default function OnboardingPage() {
           />
         );
       case 2:
-        return <>{renderComponents(componentConfig.page2)}</>;
+        return (
+          <>
+            {renderComponents(componentConfig.page2)}
+            <button
+              type="submit"
+              onClick={handlePageSubmit}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 mt-4"
+            >
+              Submit
+            </button>
+          </>
+        );
       case 3:
-        return <>{renderComponents(componentConfig.page3)}</>;
+        return (
+          <>
+            {renderComponents(componentConfig.page3)}
+            <button
+              type="submit"
+              onClick={handlePageSubmit}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 mt-4"
+            >
+              Submit
+            </button>
+          </>
+        );
+      case 4:
+        return (
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4">Onboarding Complete!</h2>
+            <p className="mb-4">
+              Thank you for completing the onboarding process.
+            </p>
+          </div>
+        );
     }
   };
 
@@ -125,6 +194,11 @@ export default function OnboardingPage() {
       <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-md text-gray-700 mt-6">
         <h1 className="text-xl font-bold mb-4">Welcome To Onboarding!</h1>
         {renderStep()}
+      </div>
+      <div className="max-w-md mx-auto mt-4 p-4 bg-gray-50 rounded text-gray-600">
+        Add comment More actions
+        <h3 className="font-semibold mb-2">Current form data:</h3>
+        <pre className="text-sm">{JSON.stringify(formData, null, 2)}</pre>
       </div>
     </div>
   );

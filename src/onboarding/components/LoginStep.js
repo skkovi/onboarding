@@ -114,7 +114,7 @@ export default function LoginStep({ data, onUpdate, onNext }) {
         </button>
       </form>
       <div>
-        <buton
+        <button
           type="button"
           disabled={isLoading}
           onClick={() => {
@@ -125,7 +125,7 @@ export default function LoginStep({ data, onUpdate, onNext }) {
           {signUp
             ? "Already have an account? Sign in"
             : "Don't have an account? Sign up"}
-        </buton>
+        </button>
       </div>
     </div>
   );
