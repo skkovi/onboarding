@@ -6,6 +6,101 @@ export default function LoginStep({ data, onUpdate, setStep }) {
   const [isLoading, setisLoading] = useState(false);
   const supabase = createClient();
 
+  const handleSignUp = async () => {
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp(
+      {
+        email: data.email.trim(),
+        password: data.password,
+      }
+    );
+    const userId = signUpData?.user?.id;
+    if (!userId) {
+      setErrors({
+        general:
+          "An account with this email already exists. Please sign in instead.",
+      });
+      setisLoading(false);
+      return;
+    }
+    if (signUpError) {
+      console.log("Error signing up:", signUpError);
+      setErrors({ general: signUpError.message });
+      setisLoading(false);
+      return;
+    }
+    console.log("Inserting user:", { userId, email: data.email });
+
+    onUpdate({ userId: userId });
+    const { data: existingUser, error } = await supabase
+      .from("users")
+      .select("current_step")
+      .eq("userId", userId);
+    if (error) {
+      setErrors({ general: error.message });
+      return;
+    }
+    if (!existingUser || existingUser.length === 0) {
+      console.log("No existing user found, creating new user");
+      const { error: insertError } = await supabase
+        .from("users")
+        .insert([
+          { userId: userId, email: data.email.trim(), current_step: 2 },
+        ]);
+      if (insertError) {
+        setErrors({ general: insertError.message });
+        return;
+      }
+      onUpdate({ current_step: 2 });
+      setStep(2);
+    } else {
+      console.log("Existing user found:", existingUser);
+      const userStep = existingUser[0]?.current_step || 2;
+      onUpdate({ current_step: userStep });
+      setStep(userStep);
+      console.log("Step set to:", userStep);
+    }
+  };
+
+  const handleSignIn = async () => {
+    const { data: signInData, error } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    });
+    if (error) {
+      if (error.message.includes("Invalid login credentials")) {
+        setErrors({ general: error.message });
+      } else {
+        console.log("Error signing in:", error);
+        setErrors({ general: error.message });
+        setisLoading(false);
+        return;
+      }
+      return;
+    }
+    const userId = signInData.user?.id;
+    if (!userId) {
+      setErrors({ general: "User not found. Please sign up." });
+      return;
+    }
+    onUpdate({ userId: userId });
+    await getUserStep(userId);
+  };
+
+  const getUserStep = async (userId) => {
+    const { data: userStepData, error: fetchError } = await supabase
+      .from("users")
+      .select("current_step")
+      .eq("userId", userId);
+    if (fetchError) {
+      setErrors({ general: fetchError.message });
+      return;
+    }
+    let step = userStepData?.[0]?.current_step;
+    if (!step || step === 1) step = 2;
+    onUpdate((prev) => ({ ...prev, ...data, current_step: step }));
+    setStep(step);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setisLoading(true);
@@ -23,99 +118,10 @@ export default function LoginStep({ data, onUpdate, setStep }) {
       return;
     }
     try {
-      if (!signUp) {
-        const { data: signInData, error } =
-          await supabase.auth.signInWithPassword({
-            email: data.email,
-            password: data.password,
-          });
-        if (error) {
-          if (error.message.includes("Invalid login credentials")) {
-            setErrors({ general: error.message });
-          } else {
-            console.log("Error signing up:", error);
-            setErrors({ general: error.message });
-            setisLoading(false);
-            return;
-          }
-        } else {
-          console.log("Signed in successfully:", signInData.user);
-          onUpdate({ userId: signInData.user?.id });
-          const { data: userStepData, error: fetchError } = await supabase
-            .from("users")
-            .select("current_step")
-            .eq("userId", signInData.user?.id);
-          if (fetchError) {
-            setErrors({ general: fetchError.message });
-            setStep(1);
-            setisLoading(false);
-            return;
-          } else {
-            let step = userStepData?.[0]?.current_step;
-            if (!step || step === 1) {
-              step = 2;
-            }
-            onUpdate({ current_step: step });
-            setStep(step);
-          }
-          return;
-        }
+      if (signUp) {
+        await handleSignUp();
       } else {
-        const { data: signUpData, error: signUpError } =
-          await supabase.auth.signUp({
-            email: data.email.trim(),
-            password: data.password,
-          });
-        const { data: userStepData, error: fetchError } = await supabase
-          .from("users")
-          .select("current_step")
-          .eq("userId", signUpData.user?.id);
-        if (fetchError) {
-          setErrors({ general: fetchError.message });
-          setStep(1);
-          setisLoading(false);
-          return;
-        } else {
-          let step = userStepData?.[0]?.current_step;
-          if (!step || step === 1) {
-            step = 2;
-          }
-          onUpdate({ current_step: step });
-          setStep(step);
-        }
-        if (signUpError) {
-          console.log("Error signing in:", signUpError);
-          setisLoading(false);
-          return;
-        }
-        const userId = signUpData.user?.id;
-        onUpdate({ userId: userId });
-        const { data: existingUser, error } = await supabase
-          .from("users")
-          .select("current_step")
-          .eq("userId", userId);
-        if (error) {
-          setErrors({ general: error.message });
-          return;
-        }
-        if (!existingUser || existingUser.length === 0) {
-          console.log("No existing user found, creating new user");
-          const { error: insertError } = await supabase
-            .from("users")
-            .insert([{ userId, email: data.email, current_step: 2 }]);
-          if (insertError) {
-            setErrors({ general: insertError.message });
-            return;
-          }
-          onUpdate({ current_step: 2 });
-          setStep(2);
-        } else {
-          console.log("Existing user found:", existingUser);
-          const userStep = existingUser[0]?.current_step || 2;
-          onUpdate({ current_step: userStep });
-          setStep(userStep);
-          console.log("Step set to:", userStep);
-        }
+        await handleSignIn();
       }
     } catch (error) {
       console.log("Error during auth:", error);

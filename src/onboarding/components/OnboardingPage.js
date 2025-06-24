@@ -38,8 +38,11 @@ export default function OnboardingPage() {
       const result = await fn();
       if (!result) return;
     }
-    if (currentStep === 3) {
-      await postData();
+    const update = await postData();
+    if (!update) {
+      console.error("Error submitting data");
+      setHasSubmitted(false);
+      return;
     }
     nextStep();
   };
@@ -75,10 +78,20 @@ export default function OnboardingPage() {
       ...rest,
       ...address,
     };
+    const filteredData = {};
+    for (const key in flattenedData) {
+      if (
+        flattenedData[key] !== undefined &&
+        flattenedData[key] !== null &&
+        flattenedData[key] !== ""
+      ) {
+        filteredData[key] = flattenedData[key];
+      }
+    }
 
     const { error } = await supabase
       .from("users")
-      .upsert([flattenedData], { onConflict: "email" });
+      .upsert([filteredData], { onConflict: "email" });
     if (error) {
       console.error("Error inserting data:", error);
       setHasSubmitted(false);
