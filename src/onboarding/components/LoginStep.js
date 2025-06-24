@@ -13,6 +13,13 @@ export default function LoginStep({ data, onUpdate, setStep }) {
         password: data.password,
       }
     );
+
+    if (signUpError) {
+      console.log("Error signing up:", signUpError);
+      setErrors({ general: signUpError.message });
+      setisLoading(false);
+      return;
+    }
     const userId = signUpData?.user?.id;
     if (!userId) {
       setErrors({
@@ -22,13 +29,6 @@ export default function LoginStep({ data, onUpdate, setStep }) {
       setisLoading(false);
       return;
     }
-    if (signUpError) {
-      console.log("Error signing up:", signUpError);
-      setErrors({ general: signUpError.message });
-      setisLoading(false);
-      return;
-    }
-    console.log("Inserting user:", { userId, email: data.email });
 
     onUpdate({ userId: userId });
     const { data: existingUser, error } = await supabase
