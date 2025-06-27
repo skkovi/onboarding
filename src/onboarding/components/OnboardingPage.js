@@ -6,9 +6,13 @@ import Address from "./Address";
 import Birthdate from "./Birthdate";
 import ProgressIndicator from "./ProgressIndicator";
 import { createClient } from "../../../utils/supabase/client";
+import {
+  fetchComponentConfig,
+  upsertUserData,
+  updateCurrentStep,
+} from "@/lib/api/wizard";
 
 export default function OnboardingPage() {
-  const supabase = createClient();
   const submitFnsRef = useRef([]);
   const [currentStep, setCurrentStep] = useState(1);
   const [hasSubmitted, setHasSubmitted] = useState(false);
@@ -16,6 +20,11 @@ export default function OnboardingPage() {
     page2: [],
     page3: [],
   });
+  const componentMap = {
+    "About Me": AboutMe,
+    Address: Address,
+    Birthdate: Birthdate,
+  };
   const [formData, setFormData] = useState({
     userId: "",
     email: "",
@@ -51,11 +60,7 @@ export default function OnboardingPage() {
     const newStep = currentStep + 1;
     setCurrentStep(newStep);
     if (formData.userId) {
-      console.log("Updating current_step to:", newStep);
-      await supabase
-        .from("users")
-        .update({ current_step: newStep })
-        .eq("userId", formData.userId);
+      await updateCurrentStep(formData.userId, newStep);
     }
     return newStep;
   };
@@ -88,59 +93,31 @@ export default function OnboardingPage() {
         filteredData[key] = flattenedData[key];
       }
     }
-
-    const { error } = await supabase
-      .from("users")
-      .upsert([filteredData], { onConflict: "email" });
-    if (error) {
-      console.error("Error inserting data:", error);
+    try {
+      await upsertUserData(filteredData);
+      return true;
+    } catch (err) {
+      console.log(err);
       setHasSubmitted(false);
       return false;
     }
-    return true;
   };
 
   const renderStep = () => {
     const renderComponents = (components) => {
       submitFnsRef.current = [];
       return components.map((component, index) => {
-        if (component === "About Me") {
-          return (
-            <AboutMe
-              key="AboutMe"
-              data={formData}
-              onUpdate={updateFormData}
-              onNext={nextStep}
-              onPrevious={previousStep}
-              onRegister={(fn) => registerSubmitFn(index, fn)}
-            />
-          );
-        }
-        if (component === "Address") {
-          return (
-            <Address
-              key="Address"
-              data={formData}
-              onUpdate={updateFormData}
-              onNext={nextStep}
-              onPrevious={previousStep}
-              onRegister={(fn) => registerSubmitFn(index, fn)}
-            />
-          );
-        }
-        if (component === "Birthdate") {
-          return (
-            <Birthdate
-              key="Birthdate"
-              data={formData}
-              onUpdate={updateFormData}
-              onNext={nextStep}
-              onPrevious={previousStep}
-              onRegister={(fn) => registerSubmitFn(index, fn)}
-            />
-          );
-        }
-        return null;
+        const StepComponent = componentMap[component];
+        return (
+          <StepComponent
+            key={component}
+            data={formData}
+            onUpdate={updateFormData}
+            onNext={nextStep}
+            onPrevious={previousStep}
+            onRegister={(fn) => registerSubmitFn(index, fn)}
+          />
+        );
       });
     };
     switch (currentStep) {
@@ -157,26 +134,44 @@ export default function OnboardingPage() {
         return (
           <>
             {renderComponents(componentConfig.page2)}
-            <button
-              type="submit"
-              onClick={handlePageSubmit}
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 mt-4"
-            >
-              Submit
-            </button>
+            <div className="flex justify-between gap-4 mt-6">
+              <button
+                type="submit"
+                onClick={previousStep}
+                className="flex-1 bg-gray-300 text-black py-2 px-4 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 mt-4"
+              >
+                Back
+              </button>
+              <button
+                type="submit"
+                onClick={handlePageSubmit}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 mt-4"
+              >
+                Submit
+              </button>
+            </div>
           </>
         );
       case 3:
         return (
           <>
             {renderComponents(componentConfig.page3)}
-            <button
-              type="submit"
-              onClick={handlePageSubmit}
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 mt-4"
-            >
-              Submit
-            </button>
+            <div className="flex justify-between gap-4 mt-6">
+              <button
+                type="submit"
+                onClick={previousStep}
+                className="flex-1 bg-gray-300 text-black py-2 px-4 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 mt-4"
+              >
+                Back
+              </button>
+              <button
+                type="submit"
+                onClick={handlePageSubmit}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 mt-4"
+              >
+                Submit
+              </button>
+            </div>
           </>
         );
       case 4:
@@ -193,17 +188,8 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     const fetchConfig = async () => {
-      const { data } = await supabase
-        .from("component_config")
-        .select("*")
-        .limit(1)
-        .single();
-      if (data) {
-        setComponentConfig({
-          page2: data.page2_components || [],
-          page3: data.page3_components || [],
-        });
-      }
+      const config = await fetchComponentConfig();
+      setComponentConfig(config);
     };
     fetchConfig();
   }, []);

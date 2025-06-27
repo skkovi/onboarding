@@ -1,6 +1,11 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 export default function AboutMe({ data, onUpdate, onRegister }) {
-  const handleSubmit = (e) => {
+  const [errors, setErrors] = useState({});
+  const handleSubmit = () => {
+    if (!data.aboutMe || data.aboutMe.trim() === "") {
+      setErrors({ aboutMe: "About Me section cannot be empty." });
+      return false;
+    }
     return true;
   };
 
@@ -19,6 +24,9 @@ export default function AboutMe({ data, onUpdate, onRegister }) {
       <label className="block text-sm font-md text-gray-700 mb-2">
         About Me
       </label>
+      {errors.aboutMe && (
+        <p className="text-red-500 text-sm mt-1">{errors.aboutMe}</p>
+      )}
       <textarea
         name="aboutMe"
         value={data.aboutMe}

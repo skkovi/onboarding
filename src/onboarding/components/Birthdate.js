@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 export default function Birthdate({ data, onUpdate, onRegister }) {
   const [errors, setErrors] = useState({});
   const handleSubmit = () => {
+    console.log("Submitting birth date:", data.birthDate);
     if (!data.birthDate) {
       setErrors({ birthDate: "Birth date is required" });
       return false;

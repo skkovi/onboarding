@@ -1,131 +1,52 @@
 import React, { useState } from "react";
 import { createClient } from "../../../utils/supabase/client";
+import {
+  signUpUser,
+  signInUser,
+  getUserStep,
+  insertNewUser,
+} from "@/lib/api/auth";
 export default function LoginStep({ data, onUpdate, setStep }) {
   const [errors, setErrors] = useState({});
   const [signUp, setSignUp] = useState(false);
   const [isLoading, setisLoading] = useState(false);
-  const supabase = createClient();
-
-  const handleSignUp = async () => {
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp(
-      {
-        email: data.email.trim(),
-        password: data.password,
-      }
-    );
-
-    if (signUpError) {
-      console.log("Error signing up:", signUpError);
-      setErrors({ general: signUpError.message });
-      setisLoading(false);
-      return;
-    }
-    const userId = signUpData?.user?.id;
-    if (!userId) {
-      setErrors({
-        general:
-          "An account with this email already exists. Please sign in instead.",
-      });
-      setisLoading(false);
-      return;
-    }
-
-    onUpdate({ userId: userId });
-    const { data: existingUser, error } = await supabase
-      .from("users")
-      .select("current_step")
-      .eq("userId", userId);
-    if (error) {
-      setErrors({ general: error.message });
-      return;
-    }
-    if (!existingUser || existingUser.length === 0) {
-      console.log("No existing user found, creating new user");
-      const { error: insertError } = await supabase
-        .from("users")
-        .insert([
-          { userId: userId, email: data.email.trim(), current_step: 2 },
-        ]);
-      if (insertError) {
-        setErrors({ general: insertError.message });
-        return;
-      }
-      onUpdate({ current_step: 2 });
-      setStep(2);
-    } else {
-      console.log("Existing user found:", existingUser);
-      const userStep = existingUser[0]?.current_step || 2;
-      onUpdate({ current_step: userStep });
-      setStep(userStep);
-      console.log("Step set to:", userStep);
-    }
-  };
-
-  const handleSignIn = async () => {
-    const { data: signInData, error } = await supabase.auth.signInWithPassword({
-      email: data.email,
-      password: data.password,
-    });
-    if (error) {
-      if (error.message.includes("Invalid login credentials")) {
-        setErrors({ general: error.message });
-      } else {
-        console.log("Error signing in:", error);
-        setErrors({ general: error.message });
-        setisLoading(false);
-        return;
-      }
-      return;
-    }
-    const userId = signInData.user?.id;
-    if (!userId) {
-      setErrors({ general: "User not found. Please sign up." });
-      return;
-    }
-    onUpdate({ userId: userId });
-    await getUserStep(userId);
-  };
-
-  const getUserStep = async (userId) => {
-    const { data: userStepData, error: fetchError } = await supabase
-      .from("users")
-      .select("current_step")
-      .eq("userId", userId);
-    if (fetchError) {
-      setErrors({ general: fetchError.message });
-      return;
-    }
-    let step = userStepData?.[0]?.current_step;
-    if (!step || step === 1) step = 2;
-    onUpdate((prev) => ({ ...prev, ...data, current_step: step }));
-    setStep(step);
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setisLoading(true);
+    const email = data.email.trim();
+    const password = data.password;
     const newErrors = {};
-    if (!data.email) {
-      newErrors.email = "Email is required";
-    }
-    if (!data.password) {
-      newErrors.password = "Password is required";
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      setisLoading(false);
-      return;
-    }
     try {
-      if (signUp) {
-        await handleSignUp();
-      } else {
-        await handleSignIn();
+      let userId;
+      if (!email) {
+        newErrors.email = "Email is required";
       }
+      if (!password) {
+        newErrors.password = "Password is required";
+      }
+
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
+        setisLoading(false);
+        return;
+      }
+      if (signUp) {
+        userId = await signUpUser(email, password);
+      } else {
+        userId = await signInUser(email, password);
+      }
+      onUpdate({ userId });
+      let step = await getUserStep(userId);
+      if (!step) {
+        await insertNewUser(userId, email);
+        step = 2;
+      }
+      onUpdate((prev) => ({ ...prev, ...data, current_step: step }));
+      setStep(step);
     } catch (error) {
       console.log("Error during auth:", error);
-      setErrors({ general: "Error occurred during auth" });
+      setErrors({ general: error.message });
     } finally {
       setisLoading(false);
     }
